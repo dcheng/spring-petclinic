@@ -17,6 +17,8 @@ package org.springframework.samples.petclinic.security;
 
 import java.util.Collections;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -31,6 +33,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class PetClinicUserDetailsService implements UserDetailsService {
 
+	private static final Logger logger = LoggerFactory.getLogger(PetClinicUserDetailsService.class);
+
 	private final UserRepository userRepository;
 
 	public PetClinicUserDetailsService(UserRepository userRepository) {
@@ -41,6 +45,11 @@ public class PetClinicUserDetailsService implements UserDetailsService {
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		User user = this.userRepository.findByUsername(username)
 			.orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+		if ("ROLE_OWNER".equals(user.getRole()) && user.getOwnerId() == null) {
+			logger.warn("User '{}' has ROLE_OWNER but no owner_id configured. "
+					+ "This user will be denied access to all owner-scoped pages.", username);
+		}
 
 		return new PetClinicUserDetails(user.getUsername(), user.getPassword(), user.isEnabled(),
 				Collections.singletonList(new SimpleGrantedAuthority(user.getRole())), user.getOwnerId());

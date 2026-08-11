@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.samples.petclinic.security.OwnerAccessChecker;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
 import org.springframework.samples.petclinic.security.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -53,6 +54,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @DisabledInNativeImage
 @DisabledInAotMode
 @WithMockUser(roles = "STAFF")
+@org.springframework.context.annotation.Import(OwnerAccessChecker.class)
 class VisitControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;

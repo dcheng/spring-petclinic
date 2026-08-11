@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.samples.petclinic.security.OwnerAccessChecker;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
 import org.springframework.samples.petclinic.security.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -60,6 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisabledInNativeImage
 @DisabledInAotMode
 @WithMockUser(roles = "STAFF")
+@org.springframework.context.annotation.Import(OwnerAccessChecker.class)
 class PetControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;

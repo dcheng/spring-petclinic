@@ -54,6 +54,8 @@ public class SecurityConfiguration {
 			.anyRequest()
 			.authenticated())
 			.formLogin(form -> form.loginPage("/login").successHandler(this.successHandler).permitAll())
+			// HTTP Basic is required for PetClinicIntegrationTests which use
+			// RestTemplate with basicAuthentication to test endpoints programmatically.
 			.httpBasic(basic -> {
 			})
 			.logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll());

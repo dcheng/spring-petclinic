@@ -22,6 +22,10 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -67,6 +71,21 @@ class OwnerController {
 				: this.owners.findById(ownerId)
 					.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId
 							+ ". Please ensure the ID is correct " + "and the owner exists in the database."));
+	}
+
+	private void checkOwnerAccess(int ownerId) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication != null && authentication.getPrincipal() instanceof PetClinicUserDetails userDetails) {
+			boolean isOwnerRole = userDetails.getAuthorities()
+				.stream()
+				.anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()));
+			if (isOwnerRole) {
+				Integer currentOwnerId = userDetails.getOwnerId();
+				if (currentOwnerId == null || currentOwnerId != ownerId) {
+					throw new AccessDeniedException("You do not have access to this owner's data.");
+				}
+			}
+		}
 	}
 
 	@GetMapping("/owners/new")
@@ -137,13 +156,15 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
-	public String initUpdateOwnerForm() {
+	public String initUpdateOwnerForm(@PathVariable("ownerId") int ownerId) {
+		checkOwnerAccess(ownerId);
 		return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/owners/{ownerId}/edit")
 	public String processUpdateOwnerForm(@Valid Owner owner, BindingResult result, @PathVariable("ownerId") int ownerId,
 			RedirectAttributes redirectAttributes) {
+		checkOwnerAccess(ownerId);
 		if (result.hasErrors()) {
 			redirectAttributes.addFlashAttribute("error", "There was an error in updating the owner.");
 			return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
@@ -168,6 +189,7 @@ class OwnerController {
 	 */
 	@GetMapping("/owners/{ownerId}")
 	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
+		checkOwnerAccess(ownerId);
 		ModelAndView mav = new ModelAndView("owners/ownerDetails");
 		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(

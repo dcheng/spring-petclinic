@@ -25,6 +25,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.samples.petclinic.security.UserRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,6 +53,9 @@ class VetControllerTests {
 
 	@MockitoBean
 	private VetRepository vets;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	private Vet james() {
 		Vet james = new Vet();

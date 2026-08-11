@@ -18,24 +18,30 @@ package org.springframework.samples.petclinic.owner;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.samples.petclinic.security.UserRepository;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDate;
-import java.util.Optional;
 
 /**
  * Test class for {@link VisitController}
@@ -46,7 +52,7 @@ import java.util.Optional;
 @WebMvcTest(VisitController.class)
 @DisabledInNativeImage
 @DisabledInAotMode
-@WithMockUser
+@WithMockUser(roles = "STAFF")
 class VisitControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
@@ -58,6 +64,9 @@ class VisitControllerTests {
 
 	@MockitoBean
 	private OwnerRepository owners;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	@BeforeEach
 	void init() {
@@ -107,6 +116,31 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Nested
+	class AuthorizationTests {
+
+		@Test
+		void ownerCanAddVisitToOwnPet() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(
+					get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(ownerUser)))
+				.andExpect(status().isOk());
+		}
+
+		@Test
+		void ownerCannotAddVisitToOtherOwnerPet() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc.perform(
+					get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
 	}
 
 }

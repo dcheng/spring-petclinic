@@ -32,14 +32,28 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
+	private final PetClinicAuthenticationSuccessHandler successHandler;
+
+	public SecurityConfiguration(PetClinicAuthenticationSuccessHandler successHandler) {
+		this.successHandler = successHandler;
+	}
+
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.authorizeHttpRequests(authorize -> authorize
 			.requestMatchers("/login", "/css/**", "/webjars/**", "/resources/**")
 			.permitAll()
+			.requestMatchers("/owners/new")
+			.hasRole("STAFF")
+			.requestMatchers("/owners/find", "/owners")
+			.hasAnyRole("STAFF", "VET")
+			.requestMatchers("/vets.html", "/vets", "/vets/**")
+			.authenticated()
+			.requestMatchers("/owners/{ownerId}/**")
+			.authenticated()
 			.anyRequest()
 			.authenticated())
-			.formLogin(form -> form.loginPage("/login").permitAll())
+			.formLogin(form -> form.loginPage("/login").successHandler(this.successHandler).permitAll())
 			.httpBasic(basic -> {
 			})
 			.logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll());

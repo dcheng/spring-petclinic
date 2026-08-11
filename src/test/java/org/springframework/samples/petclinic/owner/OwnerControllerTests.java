@@ -17,6 +17,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.samples.petclinic.security.UserRepository;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -31,6 +35,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +54,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -62,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(OwnerController.class)
 @DisabledInNativeImage
 @DisabledInAotMode
-@WithMockUser
+@WithMockUser(roles = "STAFF")
 class OwnerControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
@@ -72,6 +78,9 @@ class OwnerControllerTests {
 
 	@MockitoBean
 	private OwnerRepository owners;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	private Owner george() {
 		Owner george = new Owner();
@@ -279,10 +288,76 @@ class OwnerControllerTests {
 
 		when(owners.findById(pathOwnerId)).thenReturn(Optional.of(owner));
 
-		mockMvc.perform(MockMvcRequestBuilders.post("/owners/{ownerId}/edit", pathOwnerId).with(csrf()).flashAttr("owner", owner))
+		mockMvc
+			.perform(MockMvcRequestBuilders.post("/owners/{ownerId}/edit", pathOwnerId)
+				.with(csrf())
+				.flashAttr("owner", owner))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/owners/" + pathOwnerId + "/edit"))
 			.andExpect(flash().attributeExists("error"));
+	}
+
+	@Nested
+	class AuthorizationTests {
+
+		@Test
+		void ownerCanAccessOwnProfile() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("owners/ownerDetails"));
+		}
+
+		@Test
+		void ownerCannotAccessOtherOwnerProfile() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void ownerCannotEditOtherOwner() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc.perform(get("/owners/{ownerId}/edit", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		@WithMockUser(roles = "STAFF")
+		void staffCanAccessAnyOwner() throws Exception {
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID)).andExpect(status().isOk());
+		}
+
+		@Test
+		@WithMockUser(roles = "VET")
+		void vetCanViewOwnerDetails() throws Exception {
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID)).andExpect(status().isOk());
+		}
+
+		@Test
+		@WithMockUser(roles = "VET")
+		void vetCannotCreateNewOwner() throws Exception {
+			mockMvc.perform(get("/owners/new")).andExpect(status().isForbidden());
+		}
+
+		@Test
+		@WithMockUser(roles = "OWNER")
+		void ownerCannotAccessFindOwners() throws Exception {
+			mockMvc.perform(get("/owners/find")).andExpect(status().isForbidden());
+		}
+
+		@Test
+		@WithMockUser(roles = "OWNER")
+		void ownerCannotSearchOwners() throws Exception {
+			mockMvc.perform(get("/owners?page=1")).andExpect(status().isForbidden());
+		}
+
 	}
 
 }

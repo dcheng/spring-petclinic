@@ -42,9 +42,8 @@ public class PetClinicUserDetailsService implements UserDetailsService {
 		User user = this.userRepository.findByUsername(username)
 			.orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-		return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
-				user.isEnabled(), true, true, true,
-				Collections.singletonList(new SimpleGrantedAuthority(user.getRole())));
+		return new PetClinicUserDetails(user.getUsername(), user.getPassword(), user.isEnabled(),
+				Collections.singletonList(new SimpleGrantedAuthority(user.getRole())), user.getOwnerId());
 	}
 
 }

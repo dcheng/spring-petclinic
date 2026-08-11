@@ -24,12 +24,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.samples.petclinic.security.UserRepository;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +42,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -54,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 		includeFilters = @ComponentScan.Filter(value = PetTypeFormatter.class, type = FilterType.ASSIGNABLE_TYPE))
 @DisabledInNativeImage
 @DisabledInAotMode
-@WithMockUser
+@WithMockUser(roles = "STAFF")
 class PetControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
@@ -69,6 +74,9 @@ class PetControllerTests {
 
 	@MockitoBean
 	private PetTypeRepository types;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	@BeforeEach
 	void setup() {
@@ -281,6 +289,35 @@ class PetControllerTests {
 				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		}
+
+	}
+
+	@Nested
+	class AuthorizationTests {
+
+		@Test
+		void ownerCanAccessOwnPets() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isOk());
+		}
+
+		@Test
+		void ownerCannotAccessOtherOwnerPets() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		@WithMockUser(roles = "STAFF")
+		void staffCanAccessAnyOwnerPets() throws Exception {
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID)).andExpect(status().isOk());
 		}
 
 	}

@@ -21,6 +21,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
@@ -97,16 +101,33 @@ class PetController {
 		dataBinder.setDisallowedFields("id", "*.id");
 	}
 
+	private void checkOwnerAccess(int ownerId) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication != null && authentication.getPrincipal() instanceof PetClinicUserDetails userDetails) {
+			boolean isOwnerRole = userDetails.getAuthorities()
+				.stream()
+				.anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()));
+			if (isOwnerRole) {
+				Integer currentOwnerId = userDetails.getOwnerId();
+				if (currentOwnerId == null || currentOwnerId != ownerId) {
+					throw new AccessDeniedException("You do not have access to this owner's data.");
+				}
+			}
+		}
+	}
+
 	@GetMapping("/pets/new")
-	public String initCreationForm(Owner owner, ModelMap model) {
+	public String initCreationForm(@PathVariable("ownerId") int ownerId, Owner owner, ModelMap model) {
+		checkOwnerAccess(ownerId);
 		Pet pet = new Pet();
 		owner.addPet(pet);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/new")
-	public String processCreationForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	public String processCreationForm(@PathVariable("ownerId") int ownerId, Owner owner, @Valid Pet pet,
+			BindingResult result, RedirectAttributes redirectAttributes) {
+		checkOwnerAccess(ownerId);
 
 		if (StringUtils.hasText(pet.getName()) && pet.isNew() && owner.getPet(pet.getName(), true) != null) {
 			result.rejectValue("name", "duplicate", "already exists");
@@ -137,13 +158,15 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(@PathVariable("ownerId") int ownerId) {
+		checkOwnerAccess(ownerId);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/{petId}/edit")
-	public String processUpdateForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	public String processUpdateForm(@PathVariable("ownerId") int ownerId, Owner owner, @Valid Pet pet,
+			BindingResult result, RedirectAttributes redirectAttributes) {
+		checkOwnerAccess(ownerId);
 
 		String petName = pet.getName();
 

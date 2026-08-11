@@ -19,6 +19,10 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -51,6 +55,21 @@ class VisitController {
 	@InitBinder
 	public void setAllowedFields(WebDataBinder dataBinder) {
 		dataBinder.setDisallowedFields("id", "*.id");
+	}
+
+	private void checkOwnerAccess(int ownerId) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication != null && authentication.getPrincipal() instanceof PetClinicUserDetails userDetails) {
+			boolean isOwnerRole = userDetails.getAuthorities()
+				.stream()
+				.anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()));
+			if (isOwnerRole) {
+				Integer currentOwnerId = userDetails.getOwnerId();
+				if (currentOwnerId == null || currentOwnerId != ownerId) {
+					throw new AccessDeniedException("You do not have access to this owner's data.");
+				}
+			}
+		}
 	}
 
 	/**
@@ -88,15 +107,18 @@ class VisitController {
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@PathVariable("ownerId") int ownerId) {
+		checkOwnerAccess(ownerId);
 		return "pets/createOrUpdateVisitForm";
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
+	public String processNewVisitForm(@PathVariable("ownerId") int ownerId, @ModelAttribute Owner owner,
+			@PathVariable int petId, @Valid Visit visit, BindingResult result,
+			RedirectAttributes redirectAttributes) {
+		checkOwnerAccess(ownerId);
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}

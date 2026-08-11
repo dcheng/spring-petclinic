@@ -51,3 +51,8 @@ INSERT INTO visits (pet_id, visit_date, description) SELECT 7, '2010-03-04', 'ra
 INSERT INTO visits (pet_id, visit_date, description) SELECT 8, '2011-03-04', 'rabies shot' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=2);
 INSERT INTO visits (pet_id, visit_date, description) SELECT 8, '2009-06-04', 'neutered' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=3);
 INSERT INTO visits (pet_id, visit_date, description) SELECT 7, '2008-09-04', 'spayed' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=4);
+
+INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'admin', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_STAFF', NULL WHERE NOT EXISTS (SELECT * FROM users WHERE username='admin');
+INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'vet_james', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_VET', NULL WHERE NOT EXISTS (SELECT * FROM users WHERE username='vet_james');
+INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'owner_george', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_OWNER', 1 WHERE NOT EXISTS (SELECT * FROM users WHERE username='owner_george');
+INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'owner_betty', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_OWNER', 2 WHERE NOT EXISTS (SELECT * FROM users WHERE username='owner_betty');

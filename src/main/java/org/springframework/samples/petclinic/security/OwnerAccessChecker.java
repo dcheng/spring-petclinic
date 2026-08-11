@@ -33,6 +33,14 @@ public class OwnerAccessChecker {
 	/**
 	 * Verifies that the current authenticated user (if they have ROLE_OWNER) is
 	 * authorized to access the specified owner's data.
+	 *
+	 * <p>
+	 * NOTE: This method silently allows access when the principal is not a
+	 * {@link PetClinicUserDetails} instance (e.g., anonymous tokens or mock users in
+	 * tests). This is safe because the security filter chain requires authentication on
+	 * all owner-scoped URLs. If a future change permits anonymous access to these URLs,
+	 * this method must be updated to fail closed.
+	 * </p>
 	 * @param ownerId the owner ID from the request path
 	 * @throws AccessDeniedException if the current user is an OWNER and their ownerId
 	 * does not match

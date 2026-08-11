@@ -17,11 +17,14 @@ package org.springframework.samples.petclinic.security;
 
 import java.security.Principal;
 
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 /**
- * Makes the authenticated principal available to all Thymeleaf templates.
+ * Makes the authenticated principal and role-based flags available to all Thymeleaf
+ * templates.
  *
  * @author PetClinic contributors
  */
@@ -31,6 +34,21 @@ class AuthenticationControllerAdvice {
 	@ModelAttribute("currentUser")
 	public String currentUser(Principal principal) {
 		return principal != null ? principal.getName() : null;
+	}
+
+	/**
+	 * Returns {@code true} if the current user has ROLE_STAFF or ROLE_VET. Used in the
+	 * navbar to hide links that OWNER-role users cannot access.
+	 */
+	@ModelAttribute("canSearchOwners")
+	public boolean canSearchOwners(Principal principal) {
+		if (principal instanceof AbstractAuthenticationToken authToken) {
+			return authToken.getAuthorities()
+				.stream()
+				.map(GrantedAuthority::getAuthority)
+				.anyMatch(a -> "ROLE_STAFF".equals(a) || "ROLE_VET".equals(a));
+		}
+		return false;
 	}
 
 }

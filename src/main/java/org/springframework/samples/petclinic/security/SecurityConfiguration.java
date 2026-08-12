@@ -41,19 +41,19 @@ public class SecurityConfiguration {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		http.authorizeHttpRequests(authorize -> authorize
-			.requestMatchers("/login", "/css/**", "/webjars/**", "/resources/**")
-			.permitAll()
-			.requestMatchers("/owners/new")
-			.hasRole("STAFF")
-			.requestMatchers("/owners/find", "/owners")
-			.hasAnyRole("STAFF", "VET")
-			.requestMatchers("/vets.html", "/vets", "/vets/**")
-			.authenticated()
-			.requestMatchers("/owners/{ownerId}/**")
-			.authenticated()
-			.anyRequest()
-			.authenticated())
+		http.authorizeHttpRequests(
+				authorize -> authorize.requestMatchers("/login", "/css/**", "/webjars/**", "/resources/**")
+					.permitAll()
+					.requestMatchers("/owners/new")
+					.hasRole("STAFF")
+					.requestMatchers("/owners/find", "/owners")
+					.hasAnyRole("STAFF", "VET")
+					.requestMatchers("/vets.html", "/vets", "/vets/**")
+					.authenticated()
+					.requestMatchers("/owners/{ownerId}/**")
+					.authenticated()
+					.anyRequest()
+					.authenticated())
 			.formLogin(form -> form.loginPage("/login").successHandler(this.successHandler).permitAll())
 			// HTTP Basic is required for PetClinicIntegrationTests which use
 			// RestTemplate with basicAuthentication to test endpoints programmatically.

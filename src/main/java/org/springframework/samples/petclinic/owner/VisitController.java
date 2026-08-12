@@ -102,8 +102,7 @@ class VisitController {
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@PathVariable("ownerId") int ownerId, @ModelAttribute Owner owner,
-			@PathVariable int petId, @Valid Visit visit, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+			@PathVariable int petId, @Valid Visit visit, BindingResult result, RedirectAttributes redirectAttributes) {
 		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");

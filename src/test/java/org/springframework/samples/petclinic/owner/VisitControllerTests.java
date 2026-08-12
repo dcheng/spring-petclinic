@@ -79,8 +79,9 @@ class VisitControllerTests {
 
 	@Test
 	void initNewVisitForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-			.with(user(STAFF_USER)))
+		mockMvc
+			.perform(
+					get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
@@ -88,12 +89,12 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.with(user(STAFF_USER))
-				.with(csrf())
-				.param("name", "George")
-				.param("date", LocalDate.now().plusDays(1).toString())
-				.param("description", "Visit Description"))
+			.perform(
+					post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+						.with(csrf())
+						.param("name", "George")
+						.param("date", LocalDate.now().plusDays(1).toString())
+						.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -101,10 +102,10 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.with(user(STAFF_USER))
-				.with(csrf())
-				.param("name", "George"))
+			.perform(
+					post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+						.with(csrf())
+						.param("name", "George"))
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -113,12 +114,12 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.with(user(STAFF_USER))
-				.with(csrf())
-				.param("name", "George")
-				.param("date", LocalDate.now().toString())
-				.param("description", "Visit Description"))
+			.perform(
+					post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+						.with(csrf())
+						.param("name", "George")
+						.param("date", LocalDate.now().toString())
+						.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
@@ -133,8 +134,9 @@ class VisitControllerTests {
 			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
 					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
 
-			mockMvc.perform(
-					get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(ownerUser)))
+			mockMvc
+				.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+					.with(user(ownerUser)))
 				.andExpect(status().isOk());
 		}
 
@@ -143,8 +145,9 @@ class VisitControllerTests {
 			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
 					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
 
-			mockMvc.perform(
-					get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(ownerUser)))
+			mockMvc
+				.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+					.with(user(ownerUser)))
 				.andExpect(status().isForbidden());
 		}
 

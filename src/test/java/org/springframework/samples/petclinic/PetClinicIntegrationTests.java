@@ -51,7 +51,8 @@ public class PetClinicIntegrationTests {
 
 	@Test
 	void ownerDetails() {
-		RestTemplate template = builder.baseUri("http://localhost:" + port).basicAuthentication("admin", "password")
+		RestTemplate template = builder.baseUri("http://localhost:" + port)
+			.basicAuthentication("admin", "password")
 			.build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -59,7 +60,8 @@ public class PetClinicIntegrationTests {
 
 	@Test
 	void ownerList() {
-		RestTemplate template = builder.baseUri("http://localhost:" + port).basicAuthentication("admin", "password")
+		RestTemplate template = builder.baseUri("http://localhost:" + port)
+			.basicAuthentication("admin", "password")
 			.build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners?lastName=").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);

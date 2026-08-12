@@ -199,7 +199,8 @@ class PetControllerTests {
 
 		@Test
 		void initUpdateForm() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER)))
+			mockMvc
+				.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER)))
 				.andExpect(status().isOk())
 				.andExpect(model().attributeExists("pet"))
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
@@ -254,8 +255,7 @@ class PetControllerTests {
 		@Test
 		void processUpdateFormWithInvalidBirthDate() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
-					.with(user(STAFF_USER))
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
 					.with(csrf())
 					.param("name", " ")
 					.param("birthDate", "2015/02/12"))
@@ -269,8 +269,7 @@ class PetControllerTests {
 		@Test
 		void processUpdateFormWithBlankName() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
-					.with(user(STAFF_USER))
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
 					.with(csrf())
 					.param("name", "  ")
 					.param("birthDate", "2015-02-12"))
@@ -286,8 +285,7 @@ class PetControllerTests {
 			given(owners.saveAndFlush(any(Owner.class)))
 				.willThrow(new DataIntegrityViolationException("Duplicate key: unique_owner_pet_name"));
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
-					.with(user(STAFF_USER))
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
 					.with(csrf())
 					.param("name", "Betty")
 					.param("type", "hamster")

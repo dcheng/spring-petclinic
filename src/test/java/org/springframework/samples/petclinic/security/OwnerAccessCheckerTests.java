@@ -80,7 +80,8 @@ class OwnerAccessCheckerTests {
 		PetClinicUserDetails userDetails = new PetClinicUserDetails("owner_broken", "password", true,
 				Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), null);
 		SecurityContextHolder.getContext()
-			.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+			.setAuthentication(
+					new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
 
 		assertThatThrownBy(() -> this.checker.checkOwnerAccess(1)).isInstanceOf(AccessDeniedException.class);
 	}
@@ -90,7 +91,8 @@ class OwnerAccessCheckerTests {
 		PetClinicUserDetails userDetails = new PetClinicUserDetails("admin", "password", true,
 				Collections.singletonList(new SimpleGrantedAuthority("ROLE_STAFF")), null);
 		SecurityContextHolder.getContext()
-			.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+			.setAuthentication(
+					new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
 
 		assertThatCode(() -> this.checker.checkOwnerAccess(1)).doesNotThrowAnyException();
 	}
@@ -100,7 +102,8 @@ class OwnerAccessCheckerTests {
 		PetClinicUserDetails userDetails = new PetClinicUserDetails("vet_james", "password", true,
 				Collections.singletonList(new SimpleGrantedAuthority("ROLE_VET")), null);
 		SecurityContextHolder.getContext()
-			.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+			.setAuthentication(
+					new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
 
 		assertThatCode(() -> this.checker.checkOwnerAccess(1)).doesNotThrowAnyException();
 	}
@@ -115,7 +118,8 @@ class OwnerAccessCheckerTests {
 		PetClinicUserDetails userDetails = new PetClinicUserDetails("owner_user", "password", true,
 				Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), ownerId);
 		SecurityContextHolder.getContext()
-			.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+			.setAuthentication(
+					new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
 	}
 
 }

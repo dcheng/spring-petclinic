@@ -344,14 +344,12 @@ class OwnerControllerTests {
 
 		@Test
 		void staffCanAccessAnyOwner() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(STAFF_USER)))
-				.andExpect(status().isOk());
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(STAFF_USER))).andExpect(status().isOk());
 		}
 
 		@Test
 		void vetCanViewOwnerDetails() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(VET_USER)))
-				.andExpect(status().isOk());
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(VET_USER))).andExpect(status().isOk());
 		}
 
 		@Test

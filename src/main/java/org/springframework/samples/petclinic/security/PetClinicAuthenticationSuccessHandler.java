@@ -42,9 +42,7 @@ public class PetClinicAuthenticationSuccessHandler extends SimpleUrlAuthenticati
 		Object principal = authentication.getPrincipal();
 		if (principal instanceof PetClinicUserDetails userDetails) {
 			if (userDetails.getOwnerId() != null
-					&& userDetails.getAuthorities()
-						.stream()
-						.anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()))) {
+					&& userDetails.getAuthorities().stream().anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()))) {
 				getRedirectStrategy().sendRedirect(request, response, "/owners/" + userDetails.getOwnerId());
 				return;
 			}

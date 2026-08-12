@@ -35,7 +35,7 @@
       <div class="form-group">
         <label class="col-sm-2 control-label" th:text="#{selectVet}">Select Veterinarian</label>
         <div class="col-sm-10">
-          <select name="vetId" class="form-control">
+          <select name="vetId" id="vetSelect" class="form-control">
             <option value="" th:text="#{selectVet}">Select Veterinarian</option>
             <option th:each="v : ${vets}" th:value="${v.id}" th:text="${v.firstName + ' ' + v.lastName}"></option>
           </select>
@@ -45,7 +45,9 @@
       <div class="form-group">
         <label class="col-sm-2 control-label" th:text="#{selectTimeSlot}">Select Time Slot</label>
         <div class="col-sm-10">
-          <input type="time" name="startTime" class="form-control" step="1800" />
+          <select name="startTime" id="timeSlotSelect" class="form-control" disabled="disabled">
+            <option value="" th:text="#{selectTimeSlot}">Select Time Slot</option>
+          </select>
         </div>
       </div>
     </div>
@@ -70,6 +72,45 @@
       <td th:text=" ${visit.description}"></td>
     </tr>
   </table>
+
+  <script th:inline="javascript">
+    (function() {
+      var vetSelect = document.getElementById('vetSelect');
+      var dateInput = document.querySelector('input[name="date"]');
+      var timeSlotSelect = document.getElementById('timeSlotSelect');
+      var ownerId = /*[[${owner.id}]]*/ '';
+      var petId = /*[[${pet.id}]]*/ '';
+      var defaultOption = timeSlotSelect.innerHTML;
+
+      function fetchAvailableSlots() {
+        var vetId = vetSelect.value;
+        var date = dateInput.value;
+        timeSlotSelect.innerHTML = defaultOption;
+        if (!vetId || !date) {
+          timeSlotSelect.disabled = true;
+          return;
+        }
+        fetch('/owners/' + ownerId + '/pets/' + petId + '/visits/available-slots?vetId=' + vetId + '&date=' + date)
+          .then(function(response) { return response.json(); })
+          .then(function(slots) {
+            timeSlotSelect.innerHTML = defaultOption;
+            slots.forEach(function(slot) {
+              var option = document.createElement('option');
+              option.value = slot;
+              option.textContent = slot;
+              timeSlotSelect.appendChild(option);
+            });
+            timeSlotSelect.disabled = (slots.length === 0);
+          })
+          .catch(function() {
+            timeSlotSelect.disabled = true;
+          });
+      }
+
+      vetSelect.addEventListener('change', fetchAvailableSlots);
+      dateInput.addEventListener('change', fetchAvailableSlots);
+    })();
+  </script>
 
 </body>
 

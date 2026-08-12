@@ -28,6 +28,12 @@ import org.springframework.stereotype.Service;
 /**
  * Service for appointment scheduling logic: time-slot generation based on vet working
  * hours and double-booking prevention.
+ * <p>
+ * NOTE: The check-then-act pattern used here (check availability then book) is not
+ * concurrency-safe. In a production system, a DB-level unique constraint on (vet_id,
+ * date, start_time) with status != 'CANCELLED', or a pessimistic lock, would be needed to
+ * fully prevent race-condition double bookings. This is acceptable for a sample
+ * application.
  *
  * @author PetClinic contributors
  */
@@ -88,32 +94,15 @@ public class AppointmentService {
 
 	/**
 	 * Checks if a specific 30-minute slot is available for a given vet on a given date.
+	 * This is a convenience method that checks if the slot is in the list of available
+	 * time slots, which validates both working hours and existing bookings.
 	 * @param vetId the vet's id
 	 * @param date the date to check
 	 * @param startTime the proposed start time
 	 * @return true if the slot is available
 	 */
 	public boolean isSlotAvailable(Integer vetId, LocalDate date, LocalTime startTime) {
-		LocalTime endTime = startTime.plusMinutes(SLOT_DURATION_MINUTES);
-		List<Visit> overlapping = this.visitRepository.findOverlappingVisits(vetId, date, startTime, endTime);
-		return overlapping.isEmpty();
-	}
-
-	/**
-	 * Books an appointment after validating that the time slot is still available.
-	 * @param visit the visit to book (must have vet, date, startTime set)
-	 * @return the saved visit
-	 * @throws IllegalStateException if the slot is no longer available
-	 */
-	public Visit bookAppointment(Visit visit) {
-		if (visit.getVet() != null && visit.getStartTime() != null) {
-			if (!isSlotAvailable(visit.getVet().getId(), visit.getDate(), visit.getStartTime())) {
-				throw new IllegalStateException("This time slot is no longer available");
-			}
-			visit.setEndTime(visit.getStartTime().plusMinutes(SLOT_DURATION_MINUTES));
-		}
-		visit.setStatus("SCHEDULED");
-		return this.visitRepository.save(visit);
+		return getAvailableTimeSlots(vetId, date).contains(startTime);
 	}
 
 }

@@ -58,8 +58,8 @@ INSERT IGNORE INTO visits VALUES (1, 7, '2010-03-04', 'rabies shot', NULL, NULL,
 INSERT IGNORE INTO visits VALUES (2, 8, '2011-03-04', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false);
 INSERT IGNORE INTO visits VALUES (3, 8, '2009-06-04', 'neutered', NULL, NULL, NULL, 'COMPLETED', false);
 INSERT IGNORE INTO visits VALUES (4, 7, '2008-09-04', 'spayed', NULL, NULL, NULL, 'COMPLETED', false);
-INSERT IGNORE INTO visits VALUES (5, 1, '2026-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false);
-INSERT IGNORE INTO visits VALUES (6, 3, '2026-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false);
+INSERT IGNORE INTO visits VALUES (5, 1, '2099-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false);
+INSERT IGNORE INTO visits VALUES (6, 3, '2099-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false);
 
 INSERT IGNORE INTO users VALUES (1, 'admin', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_STAFF', NULL);
 INSERT IGNORE INTO users VALUES (2, 'vet_james', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_VET', NULL);

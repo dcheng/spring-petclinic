@@ -123,8 +123,8 @@ class VisitControllerTests {
 		vet.setFirstName("James");
 		vet.setLastName("Carter");
 		given(this.vetRepository.findById(1)).willReturn(Optional.of(vet));
-		given(this.appointmentService.isSlotAvailable(eq(1), any(LocalDate.class), eq(LocalTime.of(9, 0))))
-			.willReturn(true);
+		given(this.appointmentService.getAvailableTimeSlots(eq(1), any(LocalDate.class)))
+			.willReturn(List.of(LocalTime.of(9, 0), LocalTime.of(9, 30)));
 
 		mockMvc
 			.perform(
@@ -143,8 +143,8 @@ class VisitControllerTests {
 		Vet vet = new Vet();
 		vet.setId(1);
 		given(this.vetRepository.findById(1)).willReturn(Optional.of(vet));
-		given(this.appointmentService.isSlotAvailable(eq(1), any(LocalDate.class), eq(LocalTime.of(9, 0))))
-			.willReturn(false);
+		given(this.appointmentService.getAvailableTimeSlots(eq(1), any(LocalDate.class)))
+			.willReturn(List.of(LocalTime.of(10, 0)));
 
 		mockMvc
 			.perform(
@@ -204,10 +204,16 @@ class VisitControllerTests {
 
 	@Test
 	void cancelVisitChangesStatus() throws Exception {
+		Owner owner = new Owner();
+		owner.setId(TEST_OWNER_ID);
+		Pet pet = new Pet();
+		owner.addPet(pet);
+		pet.setId(TEST_PET_ID);
 		Visit visit = new Visit();
 		visit.setId(10);
 		visit.setStatus("SCHEDULED");
-		given(this.visitRepository.findById(10)).willReturn(Optional.of(visit));
+		pet.addVisit(visit);
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
 
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel", TEST_OWNER_ID, TEST_PET_ID, 10)
@@ -238,6 +244,18 @@ class VisitControllerTests {
 			mockMvc
 				.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
 					.with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void ownerCannotCancelOtherOwnerVisit() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc
+				.perform(post("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel", TEST_OWNER_ID, TEST_PET_ID, 10)
+					.with(user(ownerUser))
+					.with(csrf()))
 				.andExpect(status().isForbidden());
 		}
 

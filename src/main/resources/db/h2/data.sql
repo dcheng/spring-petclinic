@@ -58,8 +58,8 @@ INSERT INTO visits VALUES (default, 7, '2013-01-01', 'rabies shot', NULL, NULL, 
 INSERT INTO visits VALUES (default, 8, '2013-01-02', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false);
 INSERT INTO visits VALUES (default, 8, '2013-01-03', 'neutered', NULL, NULL, NULL, 'COMPLETED', false);
 INSERT INTO visits VALUES (default, 7, '2013-01-04', 'spayed', NULL, NULL, NULL, 'COMPLETED', false);
-INSERT INTO visits VALUES (default, 1, '2026-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false);
-INSERT INTO visits VALUES (default, 3, '2026-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false);
+INSERT INTO visits VALUES (default, 1, '2099-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false);
+INSERT INTO visits VALUES (default, 3, '2099-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false);
 
 INSERT INTO users VALUES (default, 'admin', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_STAFF', NULL);
 INSERT INTO users VALUES (default, 'vet_james', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_VET', NULL);

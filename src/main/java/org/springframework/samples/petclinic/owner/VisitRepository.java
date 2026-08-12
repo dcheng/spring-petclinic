@@ -18,7 +18,6 @@ package org.springframework.samples.petclinic.owner;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -60,19 +59,10 @@ public interface VisitRepository extends JpaRepository<Visit, Integer> {
 
 	/**
 	 * Find scheduled visits for a given date that have not yet been notified.
-	 * @param status the status to filter by
 	 * @param date the date to check
 	 * @return list of visits needing reminder notification
 	 */
 	@Transactional(readOnly = true)
 	List<Visit> findByStatusAndDateAndNotificationSentFalse(String status, LocalDate date);
-
-	/**
-	 * Find a visit by its id.
-	 * @param id the visit id
-	 * @return an Optional containing the visit if found
-	 */
-	@Transactional(readOnly = true)
-	Optional<Visit> findById(Integer id);
 
 }

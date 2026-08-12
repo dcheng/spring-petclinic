@@ -32,9 +32,6 @@ import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.samples.petclinic.vet.VetWorkingHours;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -71,12 +68,14 @@ class AppointmentServiceTests {
 
 	@Test
 	void getAvailableTimeSlotsReturnsAllSlotsWhenNoneBooked() {
-		LocalDate monday = LocalDate.of(2026, 3, 16);
+		// Find a Monday date
+		LocalDate monday = LocalDate.of(2026, 3, 16); // a Monday
 		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
 		given(visitRepository.findActiveVisitsByVetAndDate(1, monday)).willReturn(List.of());
 
 		List<LocalTime> slots = appointmentService.getAvailableTimeSlots(1, monday);
 
+		// 09:00-12:00 = 6 slots of 30 min each
 		assertThat(slots).hasSize(6);
 		assertThat(slots.get(0)).isEqualTo(LocalTime.of(9, 0));
 		assertThat(slots.get(5)).isEqualTo(LocalTime.of(11, 30));
@@ -87,6 +86,7 @@ class AppointmentServiceTests {
 		LocalDate monday = LocalDate.of(2026, 3, 16);
 		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
 
+		// Simulate a booked visit at 09:00-09:30
 		Visit bookedVisit = new Visit();
 		bookedVisit.setStartTime(LocalTime.of(9, 0));
 		bookedVisit.setEndTime(LocalTime.of(9, 30));
@@ -102,6 +102,7 @@ class AppointmentServiceTests {
 
 	@Test
 	void getAvailableTimeSlotsReturnsEmptyForNonWorkingDay() {
+		// Tuesday - vet has no working hours
 		LocalDate tuesday = LocalDate.of(2026, 3, 17);
 		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
 
@@ -120,10 +121,10 @@ class AppointmentServiceTests {
 	}
 
 	@Test
-	void isSlotAvailableReturnsTrueWhenNoOverlap() {
+	void isSlotAvailableReturnsTrueWhenSlotInAvailableList() {
 		LocalDate monday = LocalDate.of(2026, 3, 16);
-		given(visitRepository.findOverlappingVisits(eq(1), eq(monday), eq(LocalTime.of(9, 0)), eq(LocalTime.of(9, 30))))
-			.willReturn(List.of());
+		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
+		given(visitRepository.findActiveVisitsByVetAndDate(1, monday)).willReturn(List.of());
 
 		boolean available = appointmentService.isSlotAvailable(1, monday, LocalTime.of(9, 0));
 
@@ -131,11 +132,16 @@ class AppointmentServiceTests {
 	}
 
 	@Test
-	void isSlotAvailableReturnsFalseWhenOverlapping() {
+	void isSlotAvailableReturnsFalseWhenSlotNotInAvailableList() {
 		LocalDate monday = LocalDate.of(2026, 3, 16);
-		Visit existing = new Visit();
-		given(visitRepository.findOverlappingVisits(eq(1), eq(monday), eq(LocalTime.of(9, 0)), eq(LocalTime.of(9, 30))))
-			.willReturn(List.of(existing));
+		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
+
+		// Simulate a booked visit at 09:00-09:30
+		Visit bookedVisit = new Visit();
+		bookedVisit.setStartTime(LocalTime.of(9, 0));
+		bookedVisit.setEndTime(LocalTime.of(9, 30));
+		bookedVisit.setStatus("SCHEDULED");
+		given(visitRepository.findActiveVisitsByVetAndDate(1, monday)).willReturn(List.of(bookedVisit));
 
 		boolean available = appointmentService.isSlotAvailable(1, monday, LocalTime.of(9, 0));
 
@@ -143,40 +149,15 @@ class AppointmentServiceTests {
 	}
 
 	@Test
-	void bookAppointmentSucceedsWhenSlotAvailable() {
+	void isSlotAvailableReturnsFalseForNonWorkingHoursSlot() {
 		LocalDate monday = LocalDate.of(2026, 3, 16);
-		Visit visit = new Visit();
-		visit.setDate(monday);
-		visit.setStartTime(LocalTime.of(10, 0));
-		visit.setVet(vet);
-		visit.setDescription("Checkup");
+		given(vetRepository.findById(1)).willReturn(Optional.of(vet));
+		given(visitRepository.findActiveVisitsByVetAndDate(1, monday)).willReturn(List.of());
 
-		given(visitRepository.findOverlappingVisits(eq(1), eq(monday), eq(LocalTime.of(10, 0)),
-				eq(LocalTime.of(10, 30))))
-			.willReturn(List.of());
-		given(visitRepository.save(any(Visit.class))).willAnswer(invocation -> invocation.getArgument(0));
+		// 13:00 is outside the 09:00-12:00 working hours
+		boolean available = appointmentService.isSlotAvailable(1, monday, LocalTime.of(13, 0));
 
-		Visit result = appointmentService.bookAppointment(visit);
-
-		assertThat(result.getEndTime()).isEqualTo(LocalTime.of(10, 30));
-		assertThat(result.getStatus()).isEqualTo("SCHEDULED");
-	}
-
-	@Test
-	void bookAppointmentThrowsWhenSlotTaken() {
-		LocalDate monday = LocalDate.of(2026, 3, 16);
-		Visit visit = new Visit();
-		visit.setDate(monday);
-		visit.setStartTime(LocalTime.of(10, 0));
-		visit.setVet(vet);
-
-		Visit existing = new Visit();
-		given(visitRepository.findOverlappingVisits(eq(1), eq(monday), eq(LocalTime.of(10, 0)),
-				eq(LocalTime.of(10, 30))))
-			.willReturn(List.of(existing));
-
-		assertThatThrownBy(() -> appointmentService.bookAppointment(visit)).isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("no longer available");
+		assertThat(available).isFalse();
 	}
 
 }

@@ -147,9 +147,10 @@ class VisitController {
 			visit.setEndTime(startTime.plusMinutes(30));
 		}
 
-		// Validate slot availability if vet and time are set
+		// Validate slot is within vet's working hours and on the 30-min grid
 		if (vetId != null && startTime != null && visit.getDate() != null && visit.getDate().isAfter(LocalDate.now())) {
-			if (!this.appointmentService.isSlotAvailable(vetId, visit.getDate(), startTime)) {
+			List<LocalTime> availableSlots = this.appointmentService.getAvailableTimeSlots(vetId, visit.getDate());
+			if (!availableSlots.contains(startTime)) {
 				result.rejectValue("startTime", "doubleBookingError");
 			}
 		}
@@ -177,19 +178,36 @@ class VisitController {
 	}
 
 	/**
-	 * Cancels a scheduled visit.
+	 * Cancels a scheduled visit. Verifies the visit belongs to the owner's pet to prevent
+	 * IDOR attacks.
 	 */
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel")
 	public String cancelVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
 			@PathVariable("visitId") int visitId, RedirectAttributes redirectAttributes) {
 		this.ownerAccessChecker.checkOwnerAccess(ownerId);
-		Optional<Visit> optionalVisit = this.visitRepository.findById(visitId);
-		if (optionalVisit.isPresent()) {
-			Visit visit = optionalVisit.get();
-			visit.setStatus("CANCELLED");
-			this.visitRepository.save(visit);
-			redirectAttributes.addFlashAttribute("message", "Visit has been cancelled");
+
+		// Resolve the visit through the owner->pet aggregate to prevent IDOR
+		Owner owner = this.owners.findById(ownerId)
+			.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId));
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + ownerId);
 		}
+
+		// Confirm the visit belongs to this pet
+		Visit visit = pet.getVisits()
+			.stream()
+			.filter(v -> v.getId() != null && v.getId().equals(visitId))
+			.findFirst()
+			.orElse(null);
+
+		if (visit == null) {
+			throw new IllegalArgumentException("Visit with id " + visitId + " not found for pet with id " + petId);
+		}
+
+		visit.setStatus("CANCELLED");
+		this.visitRepository.save(visit);
+		redirectAttributes.addFlashAttribute("message", "Visit has been cancelled");
 		return "redirect:/owners/{ownerId}";
 	}
 

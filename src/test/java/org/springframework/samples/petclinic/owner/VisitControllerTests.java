@@ -17,7 +17,9 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,17 +30,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -68,6 +75,15 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private VetRepository vetRepository;
+
+	@MockitoBean
+	private VisitRepository visitRepository;
+
+	@MockitoBean
+	private AppointmentService appointmentService;
+
 	@BeforeEach
 	void init() {
 		Owner owner = new Owner();
@@ -75,6 +91,7 @@ class VisitControllerTests {
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		given(this.vetRepository.findAll()).willReturn(List.of());
 	}
 
 	@Test
@@ -97,6 +114,49 @@ class VisitControllerTests {
 						.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processNewVisitFormWithVetAndTimeSlot() throws Exception {
+		Vet vet = new Vet();
+		vet.setId(1);
+		vet.setFirstName("James");
+		vet.setLastName("Carter");
+		given(this.vetRepository.findById(1)).willReturn(Optional.of(vet));
+		given(this.appointmentService.getAvailableTimeSlots(eq(1), any(LocalDate.class)))
+			.willReturn(List.of(LocalTime.of(9, 0), LocalTime.of(9, 30)));
+
+		mockMvc
+			.perform(
+					post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+						.with(csrf())
+						.param("date", LocalDate.now().plusDays(1).toString())
+						.param("description", "Annual checkup")
+						.param("vetId", "1")
+						.param("startTime", "09:00"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processNewVisitFormRejectsDoubleBooking() throws Exception {
+		Vet vet = new Vet();
+		vet.setId(1);
+		given(this.vetRepository.findById(1)).willReturn(Optional.of(vet));
+		given(this.appointmentService.getAvailableTimeSlots(eq(1), any(LocalDate.class)))
+			.willReturn(List.of(LocalTime.of(10, 0)));
+
+		mockMvc
+			.perform(
+					post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+						.with(csrf())
+						.param("date", LocalDate.now().plusDays(1).toString())
+						.param("description", "Checkup")
+						.param("vetId", "1")
+						.param("startTime", "09:00"))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasFieldErrors("visit", "startTime"))
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
 
 	@Test
@@ -126,6 +186,42 @@ class VisitControllerTests {
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
 
+	@Test
+	void getAvailableSlotsReturnsJson() throws Exception {
+		given(this.appointmentService.getAvailableTimeSlots(1, LocalDate.of(2026, 3, 16)))
+			.willReturn(List.of(LocalTime.of(9, 0), LocalTime.of(9, 30), LocalTime.of(10, 0)));
+
+		mockMvc
+			.perform(get("/owners/{ownerId}/pets/{petId}/visits/available-slots", TEST_OWNER_ID, TEST_PET_ID)
+				.with(user(STAFF_USER))
+				.param("vetId", "1")
+				.param("date", "2026-03-16"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0]").value("09:00"))
+			.andExpect(jsonPath("$[1]").value("09:30"))
+			.andExpect(jsonPath("$[2]").value("10:00"));
+	}
+
+	@Test
+	void cancelVisitChangesStatus() throws Exception {
+		Owner owner = new Owner();
+		owner.setId(TEST_OWNER_ID);
+		Pet pet = new Pet();
+		owner.addPet(pet);
+		pet.setId(TEST_PET_ID);
+		Visit visit = new Visit();
+		visit.setId(10);
+		visit.setStatus("SCHEDULED");
+		pet.addVisit(visit);
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel", TEST_OWNER_ID, TEST_PET_ID, 10)
+				.with(user(STAFF_USER))
+				.with(csrf()))
+			.andExpect(status().is3xxRedirection());
+	}
+
 	@Nested
 	class AuthorizationTests {
 
@@ -148,6 +244,18 @@ class VisitControllerTests {
 			mockMvc
 				.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
 					.with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void ownerCannotCancelOtherOwnerVisit() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc
+				.perform(post("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel", TEST_OWNER_ID, TEST_PET_ID, 10)
+					.with(user(ownerUser))
+					.with(csrf()))
 				.andExpect(status().isForbidden());
 		}
 

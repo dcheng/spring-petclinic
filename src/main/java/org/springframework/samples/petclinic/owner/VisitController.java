@@ -17,12 +17,19 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.security.OwnerAccessChecker;
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -31,6 +38,8 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -48,9 +57,19 @@ class VisitController {
 
 	private final OwnerAccessChecker ownerAccessChecker;
 
-	public VisitController(OwnerRepository owners, OwnerAccessChecker ownerAccessChecker) {
+	private final VetRepository vetRepository;
+
+	private final AppointmentService appointmentService;
+
+	private final VisitRepository visitRepository;
+
+	public VisitController(OwnerRepository owners, OwnerAccessChecker ownerAccessChecker, VetRepository vetRepository,
+			AppointmentService appointmentService, VisitRepository visitRepository) {
 		this.owners = owners;
 		this.ownerAccessChecker = ownerAccessChecker;
+		this.vetRepository = vetRepository;
+		this.appointmentService = appointmentService;
+		this.visitRepository = visitRepository;
 	}
 
 	@InitBinder
@@ -90,6 +109,11 @@ class VisitController {
 		return LocalDate.now().plusDays(1);
 	}
 
+	@ModelAttribute("vets")
+	public Collection<Vet> populateVets() {
+		return this.vetRepository.findAll();
+	}
+
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
@@ -102,10 +126,33 @@ class VisitController {
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@PathVariable("ownerId") int ownerId, @ModelAttribute Owner owner,
-			@PathVariable int petId, @Valid Visit visit, BindingResult result, RedirectAttributes redirectAttributes) {
+			@PathVariable int petId, @Valid Visit visit, BindingResult result,
+			@RequestParam(required = false) Integer vetId,
+			@RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime startTime,
+			RedirectAttributes redirectAttributes) {
 		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");
+		}
+
+		// Set vet if selected
+		if (vetId != null) {
+			Optional<Vet> optionalVet = this.vetRepository.findById(vetId);
+			optionalVet.ifPresent(visit::setVet);
+		}
+
+		// Set time slot if provided
+		if (startTime != null) {
+			visit.setStartTime(startTime);
+			visit.setEndTime(startTime.plusMinutes(30));
+		}
+
+		// Validate slot is within vet's working hours and on the 30-min grid
+		if (vetId != null && startTime != null && visit.getDate() != null && visit.getDate().isAfter(LocalDate.now())) {
+			List<LocalTime> availableSlots = this.appointmentService.getAvailableTimeSlots(vetId, visit.getDate());
+			if (!availableSlots.contains(startTime)) {
+				result.rejectValue("startTime", "doubleBookingError");
+			}
 		}
 
 		if (result.hasErrors()) {
@@ -115,6 +162,52 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	/**
+	 * Returns available time slots for a given vet on a given date as JSON.
+	 */
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/available-slots")
+	@ResponseBody
+	public List<String> getAvailableSlots(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
+			@RequestParam Integer vetId, @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
+		List<LocalTime> slots = this.appointmentService.getAvailableTimeSlots(vetId, date);
+		return slots.stream().map(LocalTime::toString).collect(Collectors.toList());
+	}
+
+	/**
+	 * Cancels a scheduled visit. Verifies the visit belongs to the owner's pet to prevent
+	 * IDOR attacks.
+	 */
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel")
+	public String cancelVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
+			@PathVariable("visitId") int visitId, RedirectAttributes redirectAttributes) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
+
+		// Resolve the visit through the owner->pet aggregate to prevent IDOR
+		Owner owner = this.owners.findById(ownerId)
+			.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId));
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + ownerId);
+		}
+
+		// Confirm the visit belongs to this pet
+		Visit visit = pet.getVisits()
+			.stream()
+			.filter(v -> v.getId() != null && v.getId().equals(visitId))
+			.findFirst()
+			.orElse(null);
+
+		if (visit == null) {
+			throw new IllegalArgumentException("Visit with id " + visitId + " not found for pet with id " + petId);
+		}
+
+		visit.setStatus("CANCELLED");
+		this.visitRepository.save(visit);
+		redirectAttributes.addFlashAttribute("message", "Visit has been cancelled");
 		return "redirect:/owners/{ownerId}";
 	}
 

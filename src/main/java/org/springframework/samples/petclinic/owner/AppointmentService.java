@@ -1,0 +1,108 @@
+/*
+ * Copyright 2012-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.springframework.samples.petclinic.owner;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
+import org.springframework.samples.petclinic.vet.VetWorkingHours;
+import org.springframework.stereotype.Service;
+
+/**
+ * Service for appointment scheduling logic: time-slot generation based on vet working
+ * hours and double-booking prevention.
+ * <p>
+ * NOTE: The check-then-act pattern used here (check availability then book) is not
+ * concurrency-safe. In a production system, a DB-level unique constraint on (vet_id,
+ * date, start_time) with status != 'CANCELLED', or a pessimistic lock, would be needed to
+ * fully prevent race-condition double bookings. This is acceptable for a sample
+ * application.
+ *
+ * @author PetClinic contributors
+ */
+@Service
+public class AppointmentService {
+
+	private static final int SLOT_DURATION_MINUTES = 30;
+
+	private final VetRepository vetRepository;
+
+	private final VisitRepository visitRepository;
+
+	public AppointmentService(VetRepository vetRepository, VisitRepository visitRepository) {
+		this.vetRepository = vetRepository;
+		this.visitRepository = visitRepository;
+	}
+
+	/**
+	 * Returns available 30-minute time slot start times for a given vet on a given date.
+	 * Slots are generated from the vet's working hours for that day of the week, minus
+	 * any already-booked (non-cancelled) slots.
+	 * @param vetId the vet's id
+	 * @param date the date to check
+	 * @return list of available slot start times
+	 */
+	public List<LocalTime> getAvailableTimeSlots(Integer vetId, LocalDate date) {
+		Vet vet = this.vetRepository.findById(vetId).orElse(null);
+		if (vet == null) {
+			return List.of();
+		}
+
+		List<LocalTime> allSlots = new ArrayList<>();
+		for (VetWorkingHours hours : vet.getWorkingHours()) {
+			if (hours.getDayOfWeek() == date.getDayOfWeek()) {
+				LocalTime slotStart = hours.getStartTime();
+				while (slotStart.plusMinutes(SLOT_DURATION_MINUTES).compareTo(hours.getEndTime()) <= 0) {
+					allSlots.add(slotStart);
+					slotStart = slotStart.plusMinutes(SLOT_DURATION_MINUTES);
+				}
+			}
+		}
+
+		// Remove slots that are already booked
+		List<Visit> existingVisits = this.visitRepository.findActiveVisitsByVetAndDate(vetId, date);
+		List<LocalTime> availableSlots = new ArrayList<>();
+		for (LocalTime slot : allSlots) {
+			LocalTime slotEnd = slot.plusMinutes(SLOT_DURATION_MINUTES);
+			boolean isBooked = existingVisits.stream()
+				.anyMatch(v -> v.getStartTime() != null && v.getEndTime() != null && v.getStartTime().isBefore(slotEnd)
+						&& v.getEndTime().isAfter(slot));
+			if (!isBooked) {
+				availableSlots.add(slot);
+			}
+		}
+
+		return availableSlots;
+	}
+
+	/**
+	 * Checks if a specific 30-minute slot is available for a given vet on a given date.
+	 * This is a convenience method that checks if the slot is in the list of available
+	 * time slots, which validates both working hours and existing bookings.
+	 * @param vetId the vet's id
+	 * @param date the date to check
+	 * @param startTime the proposed start time
+	 * @return true if the slot is available
+	 */
+	public boolean isSlotAvailable(Integer vetId, LocalDate date, LocalTime startTime) {
+		return getAvailableTimeSlots(vetId, date).contains(startTime);
+	}
+
+}

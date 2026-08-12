@@ -6,7 +6,7 @@ INSERT INTO vets (first_name, last_name) SELECT 'Henry', 'Stevens' WHERE NOT EXI
 INSERT INTO vets (first_name, last_name) SELECT 'Sharon', 'Jenkins' WHERE NOT EXISTS (SELECT * FROM vets WHERE id=6);
 
 INSERT INTO specialties (name) SELECT 'radiology' WHERE NOT EXISTS (SELECT * FROM specialties WHERE name='radiology');
-INSERT INTO specialties (name) SELECT 'surgery' WHERE NOT EXISTS (SELECT * FROM specialties WHERE name='surgery'); 
+INSERT INTO specialties (name) SELECT 'surgery' WHERE NOT EXISTS (SELECT * FROM specialties WHERE name='surgery');
 INSERT INTO specialties (name) SELECT 'dentistry' WHERE NOT EXISTS (SELECT * FROM specialties WHERE name='dentistry');
 
 INSERT INTO vet_specialties VALUES (2, 1) ON CONFLICT (vet_id, specialty_id) DO NOTHING;
@@ -57,10 +57,12 @@ INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Freddy', '2000-03
 INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Lucky', '2000-06-24', 2, 10 WHERE NOT EXISTS (SELECT * FROM pets WHERE id=12);
 INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Sly', '2002-06-08', 1, 10 WHERE NOT EXISTS (SELECT * FROM pets WHERE id=13);
 
-INSERT INTO visits (pet_id, visit_date, description) SELECT 7, '2010-03-04', 'rabies shot' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=1);
-INSERT INTO visits (pet_id, visit_date, description) SELECT 8, '2011-03-04', 'rabies shot' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=2);
-INSERT INTO visits (pet_id, visit_date, description) SELECT 8, '2009-06-04', 'neutered' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=3);
-INSERT INTO visits (pet_id, visit_date, description) SELECT 7, '2008-09-04', 'spayed' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=4);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 7, '2010-03-04', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=1);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 8, '2011-03-04', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=2);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 8, '2009-06-04', 'neutered', NULL, NULL, NULL, 'COMPLETED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=3);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 7, '2008-09-04', 'spayed', NULL, NULL, NULL, 'COMPLETED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=4);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 1, '2099-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=5);
+INSERT INTO visits (pet_id, visit_date, description, vet_id, start_time, end_time, status, notification_sent) SELECT 3, '2099-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false WHERE NOT EXISTS (SELECT * FROM visits WHERE id=6);
 
 INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'admin', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_STAFF', NULL WHERE NOT EXISTS (SELECT * FROM users WHERE username='admin');
 INSERT INTO users (username, password, enabled, role, owner_id) SELECT 'vet_james', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_VET', NULL WHERE NOT EXISTS (SELECT * FROM users WHERE username='vet_james');

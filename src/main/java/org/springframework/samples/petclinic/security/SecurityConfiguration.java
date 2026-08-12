@@ -48,6 +48,11 @@ public class SecurityConfiguration {
 					.hasRole("STAFF")
 					.requestMatchers("/owners/find", "/owners")
 					.hasAnyRole("STAFF", "VET")
+					// Creating, editing and deleting vets, their working hours, and
+					// specialties is restricted to staff.
+					.requestMatchers("/vets/new", "/vets/*/edit", "/vets/*/delete", "/vets/*/working-hours/**",
+							"/specialties/**", "/specialties")
+					.hasRole("STAFF")
 					.requestMatchers("/vets.html", "/vets", "/vets/**")
 					.authenticated()
 					.requestMatchers("/owners/{ownerId}/**")

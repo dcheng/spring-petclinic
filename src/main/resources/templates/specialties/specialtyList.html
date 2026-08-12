@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'vets')}">
+
+<body>
+
+  <h2 th:text="#{specialties}">Specialties</h2>
+
+  <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}">message</div>
+  <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}">error</div>
+
+  <div class="mb-3">
+    <a class="btn btn-primary" th:href="@{/specialties/new}" th:text="#{addSpecialty}">Add Specialty</a>
+    <a class="btn btn-default" th:href="@{/vets.html}" th:text="#{vets}">Veterinarians</a>
+  </div>
+
+  <table id="specialties" class="table table-striped">
+    <thead>
+      <tr>
+        <th th:text="#{name}">Name</th>
+        <th th:text="#{actions}">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="specialty : ${specialties}">
+        <td th:text="${specialty.name}">radiology</td>
+        <td>
+          <a class="btn btn-default btn-sm" th:href="@{/specialties/{id}/edit(id=${specialty.id})}"
+            th:text="#{edit}">Edit</a>
+          <form th:action="@{/specialties/{id}/delete(id=${specialty.id})}" method="post" style="display:inline"
+            onsubmit="return confirm('Delete this specialty?');">
+            <button type="submit" class="btn btn-danger btn-sm" th:text="#{delete}">Delete</button>
+          </form>
+        </td>
+      </tr>
+      <tr th:if="${specialties.isEmpty()}">
+        <td colspan="2" th:text="#{none}">none</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+
+</html>

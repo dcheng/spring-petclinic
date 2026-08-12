@@ -15,6 +15,13 @@ INSERT INTO vet_specialties VALUES (3, 3);
 INSERT INTO vet_specialties VALUES (4, 2);
 INSERT INTO vet_specialties VALUES (5, 1);
 
+INSERT INTO vet_working_hours VALUES (default, 1, 'MONDAY', '09:00:00', '17:00:00');
+INSERT INTO vet_working_hours VALUES (default, 1, 'WEDNESDAY', '09:00:00', '17:00:00');
+INSERT INTO vet_working_hours VALUES (default, 1, 'FRIDAY', '09:00:00', '13:00:00');
+INSERT INTO vet_working_hours VALUES (default, 2, 'TUESDAY', '10:00:00', '18:00:00');
+INSERT INTO vet_working_hours VALUES (default, 2, 'THURSDAY', '10:00:00', '18:00:00');
+INSERT INTO vet_working_hours VALUES (default, 3, 'MONDAY', '08:00:00', '12:00:00');
+
 INSERT INTO types VALUES (default, 'cat');
 INSERT INTO types VALUES (default, 'dog');
 INSERT INTO types VALUES (default, 'lizard');

@@ -24,13 +24,18 @@ import java.util.stream.Collectors;
 import org.springframework.samples.petclinic.model.NamedEntity;
 import org.springframework.samples.petclinic.model.Person;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 
 /**
  * Simple JavaBean domain object representing a veterinarian.
@@ -49,6 +54,9 @@ public class Vet extends Person {
 			inverseJoinColumns = @JoinColumn(name = "specialty_id"))
 	private Set<Specialty> specialties;
 
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "vet", fetch = FetchType.EAGER, orphanRemoval = true)
+	private Set<VetWorkingHours> workingHours;
+
 	protected Set<Specialty> getSpecialtiesInternal() {
 		if (this.specialties == null) {
 			this.specialties = new HashSet<>();
@@ -63,12 +71,59 @@ public class Vet extends Person {
 			.collect(Collectors.toList());
 	}
 
+	/**
+	 * Replaces this vet's specialties. Used by Spring MVC form binding (specialty
+	 * checkboxes) via the {@link SpecialtyFormatter}.
+	 * @param specialties the specialties to assign
+	 */
+	public void setSpecialties(Set<Specialty> specialties) {
+		this.specialties = specialties;
+	}
+
 	public int getNrOfSpecialties() {
 		return getSpecialtiesInternal().size();
 	}
 
 	public void addSpecialty(Specialty specialty) {
 		getSpecialtiesInternal().add(specialty);
+	}
+
+	public void clearSpecialties() {
+		getSpecialtiesInternal().clear();
+	}
+
+	protected Set<VetWorkingHours> getWorkingHoursInternal() {
+		if (this.workingHours == null) {
+			this.workingHours = new HashSet<>();
+		}
+		return this.workingHours;
+	}
+
+	/**
+	 * Returns the working hours ordered by day of the week and then start time. Excluded
+	 * from JSON/XML serialization to keep the REST representation of a vet focused on its
+	 * identity and specialties and to avoid a back-reference cycle.
+	 */
+	@JsonIgnore
+	@XmlTransient
+	public List<VetWorkingHours> getWorkingHours() {
+		return getWorkingHoursInternal().stream()
+			.sorted(Comparator.comparing(VetWorkingHours::getDayOfWeek).thenComparing(VetWorkingHours::getStartTime))
+			.collect(Collectors.toList());
+	}
+
+	public int getNrOfWorkingHours() {
+		return getWorkingHoursInternal().size();
+	}
+
+	public void addWorkingHours(VetWorkingHours hours) {
+		hours.setVet(this);
+		getWorkingHoursInternal().add(hours);
+	}
+
+	public void removeWorkingHours(VetWorkingHours hours) {
+		getWorkingHoursInternal().remove(hours);
+		hours.setVet(null);
 	}
 
 }

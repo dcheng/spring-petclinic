@@ -6,19 +6,39 @@
 
   <h2 th:text="#{vets}">Veterinarians</h2>
 
+  <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}">message</div>
+  <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}">error</div>
+
+  <div th:if="${canManageVets}" class="mb-3">
+    <a class="btn btn-primary" th:href="@{/vets/new}" th:text="#{addVet}">Add Vet</a>
+    <a class="btn btn-default" th:href="@{/specialties}" th:text="#{manageSpecialties}">Manage Specialties</a>
+  </div>
+
   <table id="vets" class="table table-striped">
     <thead>
       <tr>
         <th th:text="#{name}">Name</th>
         <th th:text="#{specialties}">Specialties</th>
+        <th th:if="${canManageVets}" th:text="#{actions}">Actions</th>
       </tr>
     </thead>
     <tbody>
       <tr th:each="vet : ${listVets}">
-        <td th:text="${vet.firstName + ' ' + vet.lastName}"></td>
+        <td>
+          <a th:if="${canManageVets}" th:href="@{/vets/{id}(id=${vet.id})}"
+            th:text="${vet.firstName + ' ' + vet.lastName}"></a>
+          <span th:unless="${canManageVets}" th:text="${vet.firstName + ' ' + vet.lastName}"></span>
+        </td>
         <td>
           <span th:each="specialty : ${vet.specialties}" th:text="${specialty.name + ' '}" /> <span
             th:if="${vet.nrOfSpecialties == 0}" th:text="#{none}">none</span>
+        </td>
+        <td th:if="${canManageVets}">
+          <a class="btn btn-default btn-sm" th:href="@{/vets/{id}/edit(id=${vet.id})}" th:text="#{edit}">Edit</a>
+          <form th:action="@{/vets/{id}/delete(id=${vet.id})}" method="post" style="display:inline"
+            onsubmit="return confirm('Delete this veterinarian?');">
+            <button type="submit" class="btn btn-danger btn-sm" th:text="#{delete}">Delete</button>
+          </form>
         </td>
       </tr>
     </tbody>

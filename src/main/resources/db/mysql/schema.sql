@@ -19,6 +19,16 @@ CREATE TABLE IF NOT EXISTS vet_specialties (
   UNIQUE (vet_id,specialty_id)
 ) engine=InnoDB;
 
+CREATE TABLE IF NOT EXISTS vet_working_hours (
+  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  vet_id INT(4) UNSIGNED NOT NULL,
+  day_of_week VARCHAR(10) NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  INDEX(vet_id),
+  FOREIGN KEY (vet_id) REFERENCES vets(id)
+) engine=InnoDB;
+
 CREATE TABLE IF NOT EXISTS types (
   id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(80),

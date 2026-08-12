@@ -54,10 +54,12 @@ INSERT INTO pets VALUES (default, 'Freddy', '2010-03-09', 5, 9);
 INSERT INTO pets VALUES (default, 'Lucky', '2010-06-24', 2, 10);
 INSERT INTO pets VALUES (default, 'Sly', '2012-06-08', 1, 10);
 
-INSERT INTO visits VALUES (default, 7, '2013-01-01', 'rabies shot');
-INSERT INTO visits VALUES (default, 8, '2013-01-02', 'rabies shot');
-INSERT INTO visits VALUES (default, 8, '2013-01-03', 'neutered');
-INSERT INTO visits VALUES (default, 7, '2013-01-04', 'spayed');
+INSERT INTO visits VALUES (default, 7, '2013-01-01', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false);
+INSERT INTO visits VALUES (default, 8, '2013-01-02', 'rabies shot', NULL, NULL, NULL, 'COMPLETED', false);
+INSERT INTO visits VALUES (default, 8, '2013-01-03', 'neutered', NULL, NULL, NULL, 'COMPLETED', false);
+INSERT INTO visits VALUES (default, 7, '2013-01-04', 'spayed', NULL, NULL, NULL, 'COMPLETED', false);
+INSERT INTO visits VALUES (default, 1, '2026-03-15', 'Annual checkup', 1, '09:00:00', '09:30:00', 'SCHEDULED', false);
+INSERT INTO visits VALUES (default, 3, '2026-03-16', 'Vaccination', 2, '10:00:00', '10:30:00', 'SCHEDULED', false);
 
 INSERT INTO users VALUES (default, 'admin', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_STAFF', NULL);
 INSERT INTO users VALUES (default, 'vet_james', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', TRUE, 'ROLE_VET', NULL);

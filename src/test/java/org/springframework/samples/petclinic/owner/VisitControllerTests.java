@@ -34,11 +34,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -53,12 +53,14 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @DisabledInNativeImage
 @DisabledInAotMode
-@WithMockUser(roles = "STAFF")
 class VisitControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
 
 	private static final int TEST_PET_ID = 1;
+
+	private static final User STAFF_USER = new User("staff", "password", true, true, true, true,
+			Collections.singletonList(new SimpleGrantedAuthority("ROLE_STAFF")));
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -77,7 +79,8 @@ class VisitControllerTests {
 
 	@Test
 	void initNewVisitForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
@@ -85,7 +88,9 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(csrf())
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.with(user(STAFF_USER))
+				.with(csrf())
 				.param("name", "George")
 				.param("date", LocalDate.now().plusDays(1).toString())
 				.param("description", "Visit Description"))
@@ -96,7 +101,9 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(csrf())
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.with(user(STAFF_USER))
+				.with(csrf())
 				.param("name", "George"))
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
@@ -106,7 +113,9 @@ class VisitControllerTests {
 	@Test
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).with(csrf())
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.with(user(STAFF_USER))
+				.with(csrf())
 				.param("name", "George")
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))

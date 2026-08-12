@@ -21,14 +21,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -69,10 +69,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisabledInNativeImage
 @DisabledInAotMode
-@WithMockUser(roles = "STAFF")
 class OwnerControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
+
+	private static final User STAFF_USER = new User("staff", "password", true, true, true, true,
+			Collections.singletonList(new SimpleGrantedAuthority("ROLE_STAFF")));
+
+	private static final User VET_USER = new User("vet", "password", true, true, true, true,
+			Collections.singletonList(new SimpleGrantedAuthority("ROLE_VET")));
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -115,7 +120,7 @@ class OwnerControllerTests {
 
 	@Test
 	void initCreationForm() throws Exception {
-		mockMvc.perform(get("/owners/new"))
+		mockMvc.perform(get("/owners/new").with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeExists("owner"))
 			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
@@ -124,7 +129,8 @@ class OwnerControllerTests {
 	@Test
 	void processCreationFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/new").with(csrf())
+			.perform(post("/owners/new").with(user(STAFF_USER))
+				.with(csrf())
 				.param("firstName", "Joe")
 				.param("lastName", "Bloggs")
 				.param("address", "123 Caramel Street")
@@ -136,7 +142,8 @@ class OwnerControllerTests {
 	@Test
 	void processCreationFormHasErrors() throws Exception {
 		mockMvc
-			.perform(post("/owners/new").with(csrf())
+			.perform(post("/owners/new").with(user(STAFF_USER))
+				.with(csrf())
 				.param("firstName", "Joe")
 				.param("lastName", "Bloggs")
 				.param("city", "London"))
@@ -149,7 +156,7 @@ class OwnerControllerTests {
 
 	@Test
 	void initFindForm() throws Exception {
-		mockMvc.perform(get("/owners/find"))
+		mockMvc.perform(get("/owners/find").with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeExists("owner"))
 			.andExpect(view().name("owners/findOwners"));
@@ -159,14 +166,16 @@ class OwnerControllerTests {
 	void processFindFormSuccess() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
 		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
+		mockMvc.perform(get("/owners?page=1").with(user(STAFF_USER)))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
 	void processFindFormByLastName() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
 		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
+		mockMvc.perform(get("/owners?page=1").with(user(STAFF_USER)).param("lastName", "Franklin"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 	}
@@ -177,7 +186,7 @@ class OwnerControllerTests {
 		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
 
 		for (String lastName : List.of(" Franklin", "Franklin ", " Franklin ")) {
-			mockMvc.perform(get("/owners?page=1").param("lastName", lastName))
+			mockMvc.perform(get("/owners?page=1").with(user(STAFF_USER)).param("lastName", lastName))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 		}
@@ -190,7 +199,7 @@ class OwnerControllerTests {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
 		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
 
-		mockMvc.perform(get("/owners?page=1").param("lastName", "   "))
+		mockMvc.perform(get("/owners?page=1").with(user(STAFF_USER)).param("lastName", "   "))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"));
 
@@ -201,7 +210,7 @@ class OwnerControllerTests {
 	void processFindFormNoOwnersFound() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of());
 		when(this.owners.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1").param("lastName", "Unknown Surname"))
+		mockMvc.perform(get("/owners?page=1").with(user(STAFF_USER)).param("lastName", "Unknown Surname"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
 			.andExpect(model().attributeHasFieldErrorCode("owner", "lastName", "notFound"))
@@ -211,7 +220,7 @@ class OwnerControllerTests {
 
 	@Test
 	void initUpdateOwnerForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/edit", TEST_OWNER_ID))
+		mockMvc.perform(get("/owners/{ownerId}/edit", TEST_OWNER_ID).with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeExists("owner"))
 			.andExpect(model().attribute("owner", hasProperty("lastName", is("Franklin"))))
@@ -225,7 +234,8 @@ class OwnerControllerTests {
 	@Test
 	void processUpdateOwnerFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(csrf())
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(user(STAFF_USER))
+				.with(csrf())
 				.param("firstName", "Joe")
 				.param("lastName", "Bloggs")
 				.param("address", "123 Caramel Street")
@@ -237,7 +247,7 @@ class OwnerControllerTests {
 
 	@Test
 	void processUpdateOwnerFormUnchangedSuccess() throws Exception {
-		mockMvc.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(csrf()))
+		mockMvc.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(user(STAFF_USER)).with(csrf()))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -245,7 +255,8 @@ class OwnerControllerTests {
 	@Test
 	void processUpdateOwnerFormHasErrors() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(csrf())
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).with(user(STAFF_USER))
+				.with(csrf())
 				.param("firstName", "Joe")
 				.param("lastName", "Bloggs")
 				.param("address", "")
@@ -259,7 +270,7 @@ class OwnerControllerTests {
 
 	@Test
 	void showOwner() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(model().attribute("owner", hasProperty("lastName", is("Franklin"))))
 			.andExpect(model().attribute("owner", hasProperty("firstName", is("George"))))
@@ -288,6 +299,7 @@ class OwnerControllerTests {
 
 		mockMvc
 			.perform(MockMvcRequestBuilders.post("/owners/{ownerId}/edit", pathOwnerId)
+				.with(user(STAFF_USER))
 				.with(csrf())
 				.flashAttr("owner", owner))
 			.andExpect(status().is3xxRedirection())
@@ -327,33 +339,36 @@ class OwnerControllerTests {
 		}
 
 		@Test
-		@WithMockUser(roles = "STAFF")
 		void staffCanAccessAnyOwner() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID)).andExpect(status().isOk());
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(STAFF_USER)))
+				.andExpect(status().isOk());
 		}
 
 		@Test
-		@WithMockUser(roles = "VET")
 		void vetCanViewOwnerDetails() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID)).andExpect(status().isOk());
+			mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).with(user(VET_USER)))
+				.andExpect(status().isOk());
 		}
 
 		@Test
-		@WithMockUser(roles = "VET")
 		void vetCannotCreateNewOwner() throws Exception {
-			mockMvc.perform(get("/owners/new")).andExpect(status().isForbidden());
+			mockMvc.perform(get("/owners/new").with(user(VET_USER))).andExpect(status().isForbidden());
 		}
 
 		@Test
-		@WithMockUser(roles = "OWNER")
 		void ownerCannotAccessFindOwners() throws Exception {
-			mockMvc.perform(get("/owners/find")).andExpect(status().isForbidden());
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(get("/owners/find").with(user(ownerUser))).andExpect(status().isForbidden());
 		}
 
 		@Test
-		@WithMockUser(roles = "OWNER")
 		void ownerCannotSearchOwners() throws Exception {
-			mockMvc.perform(get("/owners?page=1")).andExpect(status().isForbidden());
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(get("/owners?page=1").with(user(ownerUser))).andExpect(status().isForbidden());
 		}
 
 	}

@@ -15,6 +15,16 @@ INSERT INTO vet_specialties VALUES (3, 3) ON CONFLICT (vet_id, specialty_id) DO 
 INSERT INTO vet_specialties VALUES (4, 2) ON CONFLICT (vet_id, specialty_id) DO NOTHING;
 INSERT INTO vet_specialties VALUES (5, 1) ON CONFLICT (vet_id, specialty_id) DO NOTHING;
 
+INSERT INTO vet_working_hours (vet_id, day_of_week, start_time, end_time)
+  SELECT 1, 'MONDAY', TIME '09:00', TIME '17:00'
+  WHERE NOT EXISTS (SELECT * FROM vet_working_hours WHERE vet_id = 1 AND day_of_week = 'MONDAY');
+INSERT INTO vet_working_hours (vet_id, day_of_week, start_time, end_time)
+  SELECT 1, 'WEDNESDAY', TIME '09:00', TIME '17:00'
+  WHERE NOT EXISTS (SELECT * FROM vet_working_hours WHERE vet_id = 1 AND day_of_week = 'WEDNESDAY');
+INSERT INTO vet_working_hours (vet_id, day_of_week, start_time, end_time)
+  SELECT 2, 'TUESDAY', TIME '10:00', TIME '18:00'
+  WHERE NOT EXISTS (SELECT * FROM vet_working_hours WHERE vet_id = 2 AND day_of_week = 'TUESDAY');
+
 INSERT INTO types (name) SELECT 'cat' WHERE NOT EXISTS (SELECT * FROM types WHERE name='cat');
 INSERT INTO types (name) SELECT 'dog' WHERE NOT EXISTS (SELECT * FROM types WHERE name='dog');
 INSERT INTO types (name) SELECT 'lizard' WHERE NOT EXISTS (SELECT * FROM types WHERE name='lizard');

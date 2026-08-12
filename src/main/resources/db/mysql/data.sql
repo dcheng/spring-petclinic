@@ -15,6 +15,13 @@ INSERT IGNORE INTO vet_specialties VALUES (3, 3);
 INSERT IGNORE INTO vet_specialties VALUES (4, 2);
 INSERT IGNORE INTO vet_specialties VALUES (5, 1);
 
+INSERT IGNORE INTO vet_working_hours VALUES (1, 1, 'MONDAY', '09:00:00', '17:00:00');
+INSERT IGNORE INTO vet_working_hours VALUES (2, 1, 'WEDNESDAY', '09:00:00', '17:00:00');
+INSERT IGNORE INTO vet_working_hours VALUES (3, 1, 'FRIDAY', '09:00:00', '13:00:00');
+INSERT IGNORE INTO vet_working_hours VALUES (4, 2, 'TUESDAY', '10:00:00', '18:00:00');
+INSERT IGNORE INTO vet_working_hours VALUES (5, 2, 'THURSDAY', '10:00:00', '18:00:00');
+INSERT IGNORE INTO vet_working_hours VALUES (6, 3, 'MONDAY', '08:00:00', '12:00:00');
+
 INSERT IGNORE INTO types VALUES (1, 'cat');
 INSERT IGNORE INTO types VALUES (2, 'dog');
 INSERT IGNORE INTO types VALUES (3, 'lizard');

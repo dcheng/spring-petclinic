@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'vets')}">
+
+<body>
+
+  <h2>
+    <th:block th:if="${vet['new']}" th:text="#{new}">New </th:block>
+    <span th:text="#{vet}">Veterinarian</span>
+  </h2>
+
+  <form th:object="${vet}"
+    th:action="${vet['new']} ? @{/vets/new} : @{/vets/{id}/edit(id=${vet.id})}"
+    class="form-horizontal" id="add-vet-form" method="post">
+    <div class="form-group has-feedback">
+      <input th:replace="~{fragments/inputField :: input (#{firstName}, 'firstName', 'text')}" />
+      <input th:replace="~{fragments/inputField :: input (#{lastName}, 'lastName', 'text')}" />
+
+      <div class="form-group">
+        <label class="col-sm-2 control-label" th:text="#{specialties}">Specialties</label>
+        <div class="col-sm-10">
+          <div class="checkbox" th:each="specialty : ${allSpecialties}">
+            <label>
+              <input type="checkbox" name="specialties" th:value="${specialty.name}"
+                th:checked="${#lists.contains(vet.specialties.![name], specialty.name)}" />
+              <span th:text="${specialty.name}">specialty</span>
+            </label>
+          </div>
+          <span th:if="${allSpecialties.isEmpty()}" th:text="#{none}">none</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button th:with="text=${vet['new']} ? #{addVet} : #{updateVet}" class="btn btn-primary" type="submit"
+          th:text="${text}">Add Vet</button>
+        <a class="btn btn-default" th:href="@{/vets.html}" th:text="#{cancel}">Cancel</a>
+      </div>
+    </div>
+  </form>
+</body>
+
+</html>

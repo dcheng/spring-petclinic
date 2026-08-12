@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'vets')}">
+
+<body>
+
+  <h2 th:text="#{vet}">Veterinarian</h2>
+
+  <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}">message</div>
+  <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}">error</div>
+
+  <table class="table table-striped" th:object="${vet}">
+    <tr>
+      <th th:text="#{name}">Name</th>
+      <td><b th:text="*{firstName + ' ' + lastName}"></b></td>
+    </tr>
+    <tr>
+      <th th:text="#{specialties}">Specialties</th>
+      <td>
+        <span th:each="specialty : *{specialties}" th:text="${specialty.name + ' '}" />
+        <span th:if="*{nrOfSpecialties == 0}" th:text="#{none}">none</span>
+      </td>
+    </tr>
+  </table>
+
+  <div th:if="${canManageVets}" class="mb-3">
+    <a class="btn btn-default" th:href="@{/vets/{id}/edit(id=${vet.id})}" th:text="#{editVet}">Edit Vet</a>
+    <a class="btn btn-default" th:href="@{/vets.html}" th:text="#{vets}">Veterinarians</a>
+  </div>
+
+  <h3 th:text="#{workingHours}">Working Hours</h3>
+
+  <table id="workingHours" class="table table-striped">
+    <thead>
+      <tr>
+        <th th:text="#{dayOfWeek}">Day</th>
+        <th th:text="#{startTime}">Start</th>
+        <th th:text="#{endTime}">End</th>
+        <th th:if="${canManageVets}" th:text="#{actions}">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="hours : ${vet.workingHours}">
+        <td th:text="${#strings.capitalize(#strings.toLowerCase(hours.dayOfWeek))}">Monday</td>
+        <td th:text="${#temporals.format(hours.startTime, 'HH:mm')}">09:00</td>
+        <td th:text="${#temporals.format(hours.endTime, 'HH:mm')}">17:00</td>
+        <td th:if="${canManageVets}">
+          <form th:action="@{/vets/{vid}/working-hours/{hid}/delete(vid=${vet.id},hid=${hours.id})}" method="post"
+            style="display:inline">
+            <button type="submit" class="btn btn-danger btn-sm" th:text="#{delete}">Delete</button>
+          </form>
+        </td>
+      </tr>
+      <tr th:if="${vet.nrOfWorkingHours == 0}">
+        <td colspan="4" th:text="#{noWorkingHours}">No working hours defined.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div th:if="${canManageVets}">
+    <h4 th:text="#{addWorkingHours}">Add Working Hours</h4>
+    <form th:action="@{/vets/{id}/working-hours/new(id=${vet.id})}" method="post" class="form-inline">
+      <div class="form-group">
+        <label class="control-label" th:text="#{dayOfWeek}">Day</label>
+        <select name="dayOfWeek" class="form-control">
+          <option th:each="day : ${daysOfWeek}" th:value="${day}"
+            th:text="${#strings.capitalize(#strings.toLowerCase(day))}">Monday</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="control-label" th:text="#{startTime}">Start</label>
+        <input type="time" name="startTime" class="form-control" required />
+      </div>
+      <div class="form-group">
+        <label class="control-label" th:text="#{endTime}">End</label>
+        <input type="time" name="endTime" class="form-control" required />
+      </div>
+      <button type="submit" class="btn btn-primary" th:text="#{add}">Add</button>
+    </form>
+  </div>
+
+</body>
+
+</html>

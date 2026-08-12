@@ -15,6 +15,7 @@
  */
 package org.springframework.samples.petclinic.vet;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,8 @@ import org.springframework.data.repository.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository class for <code>Vet</code> domain objects All method names are compliant
@@ -54,5 +57,39 @@ public interface VetRepository extends Repository<Vet, Integer> {
 	@Transactional(readOnly = true)
 	@Cacheable("vets")
 	Page<Vet> findAll(Pageable pageable) throws DataAccessException;
+
+	/**
+	 * Retrieve a <code>Vet</code> from the data store by id.
+	 * @param id the id to search for
+	 * @return the <code>Vet</code> if found
+	 */
+	@Transactional(readOnly = true)
+	Optional<Vet> findById(Integer id);
+
+	/**
+	 * Retrieve the <code>Vet</code>s that have the given specialty assigned. Used to
+	 * detach a specialty from its vets before the specialty is deleted.
+	 * @param specialtyId the id of the specialty
+	 * @return the <code>Vet</code>s referencing the specialty
+	 */
+	@Transactional(readOnly = true)
+	List<Vet> findBySpecialtiesId(Integer specialtyId);
+
+	/**
+	 * Save a <code>Vet</code> to the data store, either inserting or updating it. Evicts
+	 * the <code>vets</code> cache so subsequent reads reflect the change.
+	 * @param vet the <code>Vet</code> to save
+	 * @return the persisted <code>Vet</code>
+	 */
+	@CacheEvict(cacheNames = "vets", allEntries = true)
+	Vet save(Vet vet);
+
+	/**
+	 * Delete a <code>Vet</code> from the data store. Evicts the <code>vets</code> cache
+	 * so subsequent reads reflect the change.
+	 * @param vet the <code>Vet</code> to delete
+	 */
+	@CacheEvict(cacheNames = "vets", allEntries = true)
+	void delete(Vet vet);
 
 }

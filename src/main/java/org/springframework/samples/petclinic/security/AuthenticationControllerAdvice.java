@@ -51,4 +51,19 @@ class AuthenticationControllerAdvice {
 		return false;
 	}
 
+	/**
+	 * Returns {@code true} if the current user has ROLE_STAFF. Used to show or hide the
+	 * veterinarian and specialty management controls.
+	 */
+	@ModelAttribute("canManageVets")
+	public boolean canManageVets(Principal principal) {
+		if (principal instanceof AbstractAuthenticationToken authToken) {
+			return authToken.getAuthorities()
+				.stream()
+				.map(GrantedAuthority::getAuthority)
+				.anyMatch("ROLE_STAFF"::equals);
+		}
+		return false;
+	}
+
 }

@@ -21,13 +21,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.samples.petclinic.security.OwnerAccessChecker;
 import org.springframework.samples.petclinic.security.PetClinicUserDetails;
-import org.springframework.samples.petclinic.security.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.aot.DisabledInAotMode;
@@ -66,11 +65,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(OwnerController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@AutoConfigureMockMvc
 @DisabledInNativeImage
 @DisabledInAotMode
 @WithMockUser(roles = "STAFF")
-@org.springframework.context.annotation.Import({OwnerAccessChecker.class, org.springframework.samples.petclinic.security.SecurityConfiguration.class, org.springframework.samples.petclinic.security.PetClinicAuthenticationSuccessHandler.class})
 class OwnerControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
@@ -80,9 +79,6 @@ class OwnerControllerTests {
 
 	@MockitoBean
 	private OwnerRepository owners;
-
-	@MockitoBean
-	private UserRepository userRepository;
 
 	private Owner george() {
 		Owner george = new Owner();

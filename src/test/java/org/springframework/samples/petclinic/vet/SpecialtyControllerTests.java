@@ -86,7 +86,7 @@ class SpecialtyControllerTests {
 		given(this.specialties.findAllByOrderByNameAsc()).willReturn(List.of(radiology()));
 		given(this.specialties.findById(TEST_SPECIALTY_ID)).willReturn(Optional.of(radiology()));
 		given(this.specialties.findByNameIgnoreCase(any())).willReturn(Optional.empty());
-		given(this.vets.findAll()).willReturn(Lists.newArrayList());
+		given(this.vets.findBySpecialtiesId(any())).willReturn(Lists.newArrayList());
 	}
 
 	@Test

@@ -213,4 +213,9 @@ class VetControllerTests {
 		mockMvc.perform(get("/vets/new").with(user(VET_USER))).andExpect(status().isForbidden());
 	}
 
+	@Test
+	void showVetDetailsNotFoundReturns404() throws Exception {
+		mockMvc.perform(get("/vets/{vetId}", 999).with(user(STAFF_USER))).andExpect(status().isNotFound());
+	}
+
 }

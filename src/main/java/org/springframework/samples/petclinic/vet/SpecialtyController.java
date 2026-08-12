@@ -17,7 +17,9 @@ package org.springframework.samples.petclinic.vet;
 
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
@@ -100,6 +103,7 @@ class SpecialtyController {
 	}
 
 	@PostMapping("/specialties/{specialtyId}/delete")
+	@Transactional
 	public String deleteSpecialty(@PathVariable("specialtyId") int specialtyId, RedirectAttributes redirectAttributes) {
 		Specialty specialty = loadSpecialty(specialtyId);
 		detachFromVets(specialtyId);
@@ -114,20 +118,18 @@ class SpecialtyController {
 	 * @param specialtyId the specialty being removed
 	 */
 	private void detachFromVets(int specialtyId) {
-		for (Vet vet : this.vets.findAll()) {
-			boolean referenced = vet.getSpecialties().stream().anyMatch(s -> s.getId().equals(specialtyId));
-			if (referenced) {
-				var remaining = vet.getSpecialties().stream().filter(s -> !s.getId().equals(specialtyId)).toList();
-				vet.clearSpecialties();
-				remaining.forEach(vet::addSpecialty);
-				this.vets.save(vet);
-			}
+		for (Vet vet : this.vets.findBySpecialtiesId(specialtyId)) {
+			var remaining = vet.getSpecialties().stream().filter(s -> !s.getId().equals(specialtyId)).toList();
+			vet.clearSpecialties();
+			remaining.forEach(vet::addSpecialty);
+			this.vets.save(vet);
 		}
 	}
 
 	private Specialty loadSpecialty(int specialtyId) {
 		return this.specialties.findById(specialtyId)
-			.orElseThrow(() -> new IllegalArgumentException("Specialty not found with id: " + specialtyId));
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+					"Specialty not found with id: " + specialtyId));
 	}
 
 	private void validateName(Specialty specialty, Integer selfId, BindingResult result) {

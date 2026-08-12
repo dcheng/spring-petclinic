@@ -24,6 +24,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -64,6 +65,15 @@ public interface VetRepository extends Repository<Vet, Integer> {
 	 */
 	@Transactional(readOnly = true)
 	Optional<Vet> findById(Integer id);
+
+	/**
+	 * Retrieve the <code>Vet</code>s that have the given specialty assigned. Used to
+	 * detach a specialty from its vets before the specialty is deleted.
+	 * @param specialtyId the id of the specialty
+	 * @return the <code>Vet</code>s referencing the specialty
+	 */
+	@Transactional(readOnly = true)
+	List<Vet> findBySpecialtiesId(Integer specialtyId);
 
 	/**
 	 * Save a <code>Vet</code> to the data store, either inserting or updating it. Evicts

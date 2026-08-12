@@ -61,7 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisabledInNativeImage
 @DisabledInAotMode
 @WithMockUser(roles = "STAFF")
-@org.springframework.context.annotation.Import(OwnerAccessChecker.class)
+@org.springframework.context.annotation.Import({OwnerAccessChecker.class, org.springframework.samples.petclinic.security.SecurityConfiguration.class, org.springframework.samples.petclinic.security.PetClinicAuthenticationSuccessHandler.class})
 class PetControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;

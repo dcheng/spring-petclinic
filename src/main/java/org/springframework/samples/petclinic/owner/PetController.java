@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.samples.petclinic.security.OwnerAccessChecker;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
@@ -54,9 +55,12 @@ class PetController {
 
 	private final PetTypeRepository types;
 
-	public PetController(OwnerRepository owners, PetTypeRepository types) {
+	private final OwnerAccessChecker ownerAccessChecker;
+
+	public PetController(OwnerRepository owners, PetTypeRepository types, OwnerAccessChecker ownerAccessChecker) {
 		this.owners = owners;
 		this.types = types;
+		this.ownerAccessChecker = ownerAccessChecker;
 	}
 
 	@ModelAttribute("types")
@@ -98,15 +102,17 @@ class PetController {
 	}
 
 	@GetMapping("/pets/new")
-	public String initCreationForm(Owner owner, ModelMap model) {
+	public String initCreationForm(@PathVariable("ownerId") int ownerId, Owner owner, ModelMap model) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		Pet pet = new Pet();
 		owner.addPet(pet);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/new")
-	public String processCreationForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	public String processCreationForm(@PathVariable("ownerId") int ownerId, Owner owner, @Valid Pet pet,
+			BindingResult result, RedirectAttributes redirectAttributes) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 
 		if (StringUtils.hasText(pet.getName()) && pet.isNew() && owner.getPet(pet.getName(), true) != null) {
 			result.rejectValue("name", "duplicate", "already exists");
@@ -137,13 +143,15 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(@PathVariable("ownerId") int ownerId) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/{petId}/edit")
-	public String processUpdateForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	public String processUpdateForm(@PathVariable("ownerId") int ownerId, Owner owner, @Valid Pet pet,
+			BindingResult result, RedirectAttributes redirectAttributes) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 
 		String petName = pet.getName();
 

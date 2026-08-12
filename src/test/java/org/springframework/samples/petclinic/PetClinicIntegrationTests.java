@@ -16,8 +16,6 @@
 
 package org.springframework.samples.petclinic;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -30,6 +28,8 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.web.client.RestTemplate;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "logging.level.sql=DEBUG")
 public class PetClinicIntegrationTests {
@@ -51,14 +51,18 @@ public class PetClinicIntegrationTests {
 
 	@Test
 	void ownerDetails() {
-		RestTemplate template = builder.baseUri("http://localhost:" + port).build();
+		RestTemplate template = builder.baseUri("http://localhost:" + port)
+			.basicAuthentication("admin", "password")
+			.build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
 	}
 
 	@Test
 	void ownerList() {
-		RestTemplate template = builder.baseUri("http://localhost:" + port).build();
+		RestTemplate template = builder.baseUri("http://localhost:" + port)
+			.basicAuthentication("admin", "password")
+			.build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners?lastName=").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
 	}

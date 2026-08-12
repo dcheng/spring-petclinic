@@ -16,26 +16,30 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.samples.petclinic.security.PetClinicUserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.dao.DataIntegrityViolationException;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -48,8 +52,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(value = PetController.class,
-		includeFilters = @ComponentScan.Filter(value = PetTypeFormatter.class, type = FilterType.ASSIGNABLE_TYPE))
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@AutoConfigureMockMvc
 @DisabledInNativeImage
 @DisabledInAotMode
 class PetControllerTests {
@@ -57,6 +61,9 @@ class PetControllerTests {
 	private static final int TEST_OWNER_ID = 1;
 
 	private static final int TEST_PET_ID = 1;
+
+	private static final User STAFF_USER = new User("staff", "password", true, true, true, true,
+			Collections.singletonList(new SimpleGrantedAuthority("ROLE_STAFF")));
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -88,7 +95,7 @@ class PetControllerTests {
 
 	@Test
 	void initCreationForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID))
+		mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER)))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdatePetForm"))
 			.andExpect(model().attributeExists("pet"));
@@ -97,7 +104,9 @@ class PetControllerTests {
 	@Test
 	void processCreationFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
+			.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+				.with(csrf())
+				.param("name", "Betty")
 				.param("type", "hamster")
 				.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
@@ -110,7 +119,9 @@ class PetControllerTests {
 		@Test
 		void processCreationFormWithBlankName() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "\t \n")
+				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "\t \n")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -123,7 +134,9 @@ class PetControllerTests {
 		@Test
 		void processCreationFormWithDuplicateName() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "petty")
+				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "petty")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -136,7 +149,9 @@ class PetControllerTests {
 		@Test
 		void processCreationFormWithMissingPetType() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
+				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "Betty")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -152,7 +167,9 @@ class PetControllerTests {
 			String futureBirthDate = currentDate.plusMonths(1).toString();
 
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
+				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "Betty")
 					.param("birthDate", futureBirthDate))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -167,7 +184,9 @@ class PetControllerTests {
 			given(owners.saveAndFlush(any(Owner.class)))
 				.willThrow(new DataIntegrityViolationException("Duplicate key: unique_owner_pet_name"));
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
+				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "Betty")
 					.param("type", "hamster")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
@@ -180,7 +199,8 @@ class PetControllerTests {
 
 		@Test
 		void initUpdateForm() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID))
+			mockMvc
+				.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER)))
 				.andExpect(status().isOk())
 				.andExpect(model().attributeExists("pet"))
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
@@ -191,7 +211,9 @@ class PetControllerTests {
 	@Test
 	void processUpdateFormSuccess() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "Betty")
+			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+				.with(csrf())
+				.param("name", "Betty")
 				.param("type", "hamster")
 				.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
@@ -200,13 +222,12 @@ class PetControllerTests {
 
 	@Test
 	void processUpdateFormWithSameName() throws Exception {
-		mockMvc.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // same
-																														// name
-																														// as
-																														// existing
-																														// pet
-			.param("type", "hamster")
-			.param("birthDate", "2015-02-12"))
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+				.with(csrf())
+				.param("name", "petty") // same name as existing pet
+				.param("type", "hamster")
+				.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -218,6 +239,8 @@ class PetControllerTests {
 		void processUpdateFormWithDuplicateName() throws Exception {
 			mockMvc
 				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID + 1)
+					.with(user(STAFF_USER))
+					.with(csrf())
 					.param("name", "petty")
 					.param("type", "hamster")
 					.param("birthDate", "2015-02-12"))
@@ -232,7 +255,9 @@ class PetControllerTests {
 		@Test
 		void processUpdateFormWithInvalidBirthDate() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", " ")
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", " ")
 					.param("birthDate", "2015/02/12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -244,7 +269,9 @@ class PetControllerTests {
 		@Test
 		void processUpdateFormWithBlankName() throws Exception {
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "  ")
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "  ")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
@@ -258,7 +285,9 @@ class PetControllerTests {
 			given(owners.saveAndFlush(any(Owner.class)))
 				.willThrow(new DataIntegrityViolationException("Duplicate key: unique_owner_pet_name"));
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "Betty")
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).with(user(STAFF_USER))
+					.with(csrf())
+					.param("name", "Betty")
 					.param("type", "hamster")
 					.param("birthDate", "2015-02-12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
@@ -267,6 +296,35 @@ class PetControllerTests {
 				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		}
+
+	}
+
+	@Nested
+	class AuthorizationTests {
+
+		@Test
+		void ownerCanAccessOwnPets() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_george", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), TEST_OWNER_ID);
+
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isOk());
+		}
+
+		@Test
+		void ownerCannotAccessOtherOwnerPets() throws Exception {
+			PetClinicUserDetails ownerUser = new PetClinicUserDetails("owner_betty", "password", true,
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_OWNER")), 2);
+
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(ownerUser)))
+				.andExpect(status().isForbidden());
+		}
+
+		@Test
+		void staffCanAccessAnyOwnerPets() throws Exception {
+			mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID).with(user(STAFF_USER)))
+				.andExpect(status().isOk());
 		}
 
 	}

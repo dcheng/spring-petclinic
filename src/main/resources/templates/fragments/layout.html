@@ -43,10 +43,12 @@
             <span th:text="#{home}">Home</span>
           </li>
 
+          <th:block th:if="${canSearchOwners}">
           <li th:replace="~{::menuItem ('/owners/find','owners','find owners','search',#{findOwners})}">
             <span class="fa fa-search" aria-hidden="true"></span>
             <span th:text="#{findOwners}">Find owners</span>
           </li>
+          </th:block>
 
           <li th:replace="~{::menuItem ('/vets.html','vets','veterinarians','th-list',#{vets})}">
             <span class="fa fa-th-list" aria-hidden="true"></span>
@@ -59,6 +61,20 @@
             <span th:text="#{error}">Error</span>
           </li>
 
+        </ul>
+
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item" th:if="${currentUser != null}">
+            <span class="nav-link">
+              <span class="fa fa-user" aria-hidden="true"></span>
+              <span th:text="#{loggedInAs} + ' ' + ${currentUser}">Logged in as user</span>
+            </span>
+          </li>
+          <li class="nav-item" th:if="${currentUser != null}">
+            <form th:action="@{/logout}" method="post" style="display:inline">
+              <button type="submit" class="btn btn-link nav-link" th:text="#{logout}">Logout</button>
+            </form>
+          </li>
         </ul>
       </div>
     </div>

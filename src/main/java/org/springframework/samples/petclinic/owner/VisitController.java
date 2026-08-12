@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
+import jakarta.validation.Valid;
+
+import org.springframework.samples.petclinic.security.OwnerAccessChecker;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,8 +31,6 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-
-import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -44,8 +46,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final OwnerAccessChecker ownerAccessChecker;
+
+	public VisitController(OwnerRepository owners, OwnerAccessChecker ownerAccessChecker) {
 		this.owners = owners;
+		this.ownerAccessChecker = ownerAccessChecker;
 	}
 
 	@InitBinder
@@ -88,15 +93,17 @@ class VisitController {
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@PathVariable("ownerId") int ownerId) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		return "pets/createOrUpdateVisitForm";
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
+	public String processNewVisitForm(@PathVariable("ownerId") int ownerId, @ModelAttribute Owner owner,
+			@PathVariable int petId, @Valid Visit visit, BindingResult result, RedirectAttributes redirectAttributes) {
+		this.ownerAccessChecker.checkOwnerAccess(ownerId);
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}
